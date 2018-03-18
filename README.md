@@ -1,5 +1,5 @@
 # aws-athena-client
-An Athena client for my personal use. Send query to the Athena then download the result file.
+An Athena client for my personal use. Send query to the Athena then download the result file from S3.
 
 ---
 
