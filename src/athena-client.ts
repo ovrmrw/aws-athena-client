@@ -81,12 +81,11 @@ export class AthenaClient {
     });
   }
 
-  async execute(query?: string): Promise<string> {
-    const _query = query || `SELECT * FROM "arangodb_example_datasets"."random_users";`;
+  async execute(query: string): Promise<string> {
     const startTime = Date.now();
     let isSucceeded = false;
     let queryExecution: QueryExecution = {} as any;
-    const queryExecutionId = await this.startQueryExecution(_query);
+    const queryExecutionId = await this.startQueryExecution(query);
     while (Date.now() - startTime < this.timeout) {
       queryExecution = await this.getQueryExecution(queryExecutionId);
       const status = queryExecution.Status || {};
