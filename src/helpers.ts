@@ -8,3 +8,8 @@ export function makeDir(name: string): string {
   }
   return dirpath;
 }
+
+export function getQuery(filename: string): string {
+  const filepath = path.join(__dirname, filename);
+  return fs.readFileSync(filepath).toString();
+}
