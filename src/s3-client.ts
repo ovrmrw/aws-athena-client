@@ -21,16 +21,18 @@ export class S3Client {
         Bucket: bucket,
         Key: keys.join('/')
       };
-      this.s3.getObject(params, (err, data) => {
-        if (err) {
-          reject(err);
-          return;
+      const rs = this.s3.getObject(params).createReadStream();
+      rs.on('data', chunk => {
+        if (!ws.write(chunk)) {
+          rs.pause();
+          ws.once('drain', () => rs.resume());
         }
-        ws.write(data.Body);
-        ws.end();
       });
-      ws.once('close', () => {
-        console.log('WriteStream is closed.');
+      rs.on('error', reject);
+      rs.on('end', () => ws.end());
+      ws.on('error', reject);
+      ws.on('finish', () => {
+        console.log('WriteStream is finished.');
         resolve(writableFilepath);
       });
     });

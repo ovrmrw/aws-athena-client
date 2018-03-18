@@ -3,8 +3,7 @@ import {
   StartQueryExecutionInput,
   QueryExecutionId,
   GetQueryExecutionInput,
-  QueryExecution,
-  ResultConfiguration
+  QueryExecution
 } from 'aws-sdk/clients/athena';
 import * as moment from 'moment';
 
@@ -21,32 +20,36 @@ export class AthenaClient {
   }
 
   async execute(query: string): Promise<string> {
-    const startTime = Date.now();
-    let state = '';
-    let queryExecution: QueryExecution = {} as any;
     const queryExecutionId = await this.startQueryExecution(query);
+    const queryExecution = await this.waitQueryExecution(queryExecutionId);
+    const status = queryExecution.Status || {};
+    if (status.State === 'SUCCEEDED') {
+      console.log('Result:', {
+        Status: status,
+        Query: queryExecution.Query,
+        ResultConfiguration: queryExecution.ResultConfiguration,
+        Statistics: queryExecution.Statistics
+      });
+    } else {
+      console.log('Result:', status);
+    }
+    const resultConfiguration = queryExecution.ResultConfiguration;
+    return resultConfiguration ? resultConfiguration.OutputLocation : '';
+  }
+
+  private async waitQueryExecution(queryExecutionId: QueryExecutionId): Promise<QueryExecution> {
+    let queryExecution: QueryExecution = {};
+    const startTime = Date.now();
     while (Date.now() - startTime < this.timeout) {
       queryExecution = await this.getQueryExecution(queryExecutionId);
       const status = queryExecution.Status || {};
-      state = status.State || '';
+      const state = status.State;
       if (state === 'SUCCEEDED' || state === 'FAILED' || state === 'CANCELLED') {
         break;
       }
       await new Promise(resolve => setTimeout(resolve, 500));
     }
-    if (state === 'SUCCEEDED') {
-      console.log('Result:', {
-        status: queryExecution.Status,
-        query: queryExecution.Query,
-        resultConfiguration: queryExecution.ResultConfiguration,
-        statistics: queryExecution.Statistics
-      });
-    } else {
-      console.log('Result:', state);
-    }
-    const resultConfiguration: ResultConfiguration =
-      queryExecution.ResultConfiguration || ({} as any);
-    return resultConfiguration.OutputLocation;
+    return queryExecution;
   }
 
   private startQueryExecution(query: string): Promise<QueryExecutionId> {
